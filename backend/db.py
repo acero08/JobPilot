@@ -1,4 +1,8 @@
-"""Tiny SQLite layer. One table, profile data stored as JSON."""
+"""SQLite storage for profiles.
+
+Profiles are stored as JSON documents in a single table, because their shape
+is owned by the UI and changes more often than a relational schema would.
+"""
 import json
 import sqlite3
 

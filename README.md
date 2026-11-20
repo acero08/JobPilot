@@ -1,8 +1,9 @@
 # JobPilot
 
-Local app: save profiles (resume + target job types + locations + common answers),
-then open any application page and autofill it from the best-matching profile.
-It fills the form and stops. **You review and click Submit.**
+A local app for job applications. Save profiles (resume, target job types,
+locations and common answers), then open an application page and fill it from
+the best-matching profile. JobPilot fills the form and stops: it never submits
+an application. Submission is always a manual step.
 
 ## Setup (once)
 ```
@@ -32,10 +33,10 @@ Settings live in `backend/.env` and `frontend/.env` (never committed). See the `
 3. Enter title + location, click "Suggest best profile" (or pick one), paste URL, "Open & autofill".
 4. A Chrome window opens, fills the form and uploads the resume. Fix anything listed under "Needs you", then submit.
 
-Logins persist in `backend/data/browser-profile`, so sign in to a job site once.
-Data (profiles, resumes) lives in `backend/data/`. Nothing leaves your machine.
+Sign-ins persist in `backend/data/browser-profile`, so each job site needs a login only once.
+Profiles and resumes are stored in `backend/data/` and are sent only to the job sites you open for autofill.
 
 ## Notes
 - Gender/race/veteran/disability questions are deliberately never filled.
-- Works best on Greenhouse, Lever, Ashby and similar plain forms; Workday multi-step flows will be partial.
-- Matching lives in `backend/suggest.py`. Job feeds (Greenhouse/Lever/Ashby APIs) plug in there next.
+- Works best on Greenhouse, Lever, Ashby and similar single-page forms; multi-step flows such as Workday are filled only partially.
+- Profile matching is implemented in `backend/suggest.py`.

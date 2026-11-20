@@ -89,7 +89,7 @@ def suggest_profile(title: str = "", location: str = "", remote: bool = False):
     return suggest.rank(db.list_profiles(), title, location, remote)
 
 
-# Serve the built frontend if present (npm run build)
+# Serve the production UI build when it exists.
 dist = Path(__file__).parent.parent / "frontend" / "dist"
 if dist.exists():
     app.mount("/", StaticFiles(directory=dist, html=True), name="ui")

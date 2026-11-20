@@ -1,10 +1,11 @@
 """Playwright autofill engine.
 
-Opens the job application page in a visible Chromium window, fills what it can
-from the chosen profile, uploads the resume, and then STOPS. It never clicks
-submit; you review and submit yourself. Fields it can't confidently match are
-reported back so you know what to fill in by hand. EEO/demographic questions
-(gender, race, veteran, disability) are intentionally left alone.
+Opens the application page in a visible Chromium window, fills the fields it
+can match from the selected profile, attaches the resume, and stops. It never
+submits a form: the applicant reviews the page and submits it manually.
+Unmatched fields are returned in the report so they can be completed by hand.
+EEO and demographic questions (gender, race, veteran, disability) are never
+filled, because those answers should always be an explicit personal choice.
 """
 import re
 
@@ -13,12 +14,13 @@ from playwright.async_api import async_playwright
 from config import HEADLESS, PAGE_SETTLE_MS
 from db import DATA_DIR, RESUME_DIR
 
-BROWSER_DIR = DATA_DIR / "browser-profile"  # persists logins between runs
+# A persistent profile keeps job-site sessions, so sign-in is needed only once.
+BROWSER_DIR = DATA_DIR / "browser-profile"
 
 _pw = None
 _ctx = None
 
-# (key, regex). Order matters: first match wins.
+# (key, regex) pairs. The first match wins, so more specific patterns come first.
 RULES = [
     ("sponsorship", r"sponsor|require.*visa|visa.*(status|require)"),
     ("work_authorized", r"authori[sz]ed to work|legally (authori[sz]ed|eligible)|eligible to work|right to work"),
@@ -62,7 +64,7 @@ COLLECT_JS = """
     const lb = el.getAttribute('aria-labelledby');
     if (lb) lb.split(' ').forEach(id => parts.push(txt(document.getElementById(id))));
     ['aria-label','placeholder','name','id','autocomplete','data-qa','data-testid'].forEach(a => { const v = el.getAttribute(a); if (v) parts.push(v); });
-    // group question text for radios / checkboxes / selects without labels
+    // Radios and unlabeled controls carry their question text on the enclosing group.
     const grp = el.closest('fieldset');
     let question = '';
     if (grp) { const lg = grp.querySelector('legend'); question = txt(lg) || ''; }
@@ -122,7 +124,7 @@ async def _get_context():
         _pw = await async_playwright().start()
     if _ctx is not None:
         try:
-            await _ctx.new_page()  # raises if the user closed the window
+            await _ctx.new_page()  # raises if the browser window was closed
             pages = _ctx.pages
             await pages[-1].close()
             return _ctx
@@ -181,7 +183,7 @@ async def _fill_frame(frame, profile, resume_path, report):
                 report["skipped"].append(f"{shown} (profile has no {key.replace('_', ' ')})")
                 continue
             if f["value"].strip():
-                continue  # never overwrite what's already there
+                continue  # keep values already present on the page
 
             if f["tag"] == "select":
                 target = _yes_no(value) if key in ("work_authorized", "sponsorship", "relocate") else value.lower()
@@ -195,7 +197,7 @@ async def _fill_frame(frame, profile, resume_path, report):
             else:
                 await loc.fill(value)
                 report["filled"].append(shown)
-        except Exception as e:  # one bad field must not stop the rest
+        except Exception as e:  # a single failing field should not abort the run
             report["skipped"].append(f"{shown} (error: {type(e).__name__})")
 
 
@@ -208,7 +210,7 @@ async def autofill(url, profile):
     ctx = await _get_context()
     page = await ctx.new_page()
     await page.goto(url, wait_until="domcontentloaded")
-    await page.wait_for_timeout(PAGE_SETTLE_MS)  # let SPA forms render
+    await page.wait_for_timeout(PAGE_SETTLE_MS)  # client-rendered forms appear after the initial load
     report = {"filled": [], "skipped": [], "url": url}
     for frame in page.frames:
         await _fill_frame(frame, profile, resume_path, report)

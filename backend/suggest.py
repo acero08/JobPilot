@@ -1,5 +1,8 @@
-"""Rank saved profiles for a job (title + location). Simple keyword scoring;
-this is the seam where smarter matching / job-feed matching plugs in later."""
+"""Rank saved profiles against a job title and location.
+
+Scoring is keyword overlap, kept deliberately simple and explainable: each
+result carries the reasons that produced its score.
+"""
 import re
 
 
