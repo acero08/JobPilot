@@ -100,6 +100,11 @@ async def run_autofill(pid: int, req: AutofillReq):
         raise HTTPException(500, f"Autofill failed: {e}")
 
 
+@app.get("/api/ats-domains")
+def ats_domains():
+    return list(config.ATS_DOMAINS)
+
+
 @app.get("/api/suggest")
 def suggest_profile(title: str = "", location: str = "", remote: bool = False):
     return suggest.rank(db.list_profiles(), title, location, remote)

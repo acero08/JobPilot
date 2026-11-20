@@ -8,10 +8,11 @@ EEO and demographic questions (gender, race, veteran, disability) are never
 filled, because those answers should always be an explicit personal choice.
 """
 import re
+from urllib.parse import urlsplit
 
 from playwright.async_api import async_playwright
 
-from config import HEADLESS, PAGE_SETTLE_MS
+from config import ATS_DOMAINS, HEADLESS, PAGE_SETTLE_MS
 from db import DATA_DIR
 from uploads import stored_path
 
@@ -57,7 +58,11 @@ COLLECT_JS = """
     const type = (el.getAttribute('type') || el.tagName).toLowerCase();
     if (['hidden','submit','button','image','reset','password','search'].includes(type)) continue;
     const r = el.getBoundingClientRect();
-    const visible = (r.width > 0 && r.height > 0) || type === 'file';
+    const cs = getComputedStyle(el);
+    // File inputs are commonly styled invisible behind a custom button, so they
+    // are the one exception to the visibility rule.
+    const visible = type === 'file' ||
+      (r.width > 0 && r.height > 0 && cs.visibility !== 'hidden' && cs.display !== 'none' && cs.opacity !== '0');
     if (!visible || el.disabled) continue;
     const parts = [];
     if (el.id) { const l = document.querySelector('label[for="' + CSS.escape(el.id) + '"]'); if (l) parts.push(txt(l)); }
@@ -83,6 +88,33 @@ COLLECT_JS = """
   return out;
 }
 """
+
+
+def is_ats_host(host):
+    host = (host or "").lower().rstrip(".")
+    return any(host == d or host.endswith("." + d) for d in ATS_DOMAINS)
+
+
+def _origin(url):
+    parts = urlsplit(url)
+    return (parts.scheme, parts.hostname, parts.port)
+
+
+def frame_policy(top_url, frame_url):
+    """Decide whether a frame may receive profile data.
+
+    Returns (allowed, reason). Same-origin frames belong to the page being
+    filled. Cross-origin frames are filled only for known ATS hosts, so ad,
+    analytics or chat widgets embedded in a careers page never receive data.
+    """
+    parts = urlsplit(frame_url)
+    if parts.scheme not in ("http", "https"):
+        return False, None  # about:blank, srcdoc and similar hold no application form
+    if _origin(frame_url) == _origin(top_url):
+        return True, None
+    if is_ats_host(parts.hostname):
+        return True, None
+    return False, f"embedded frame from {parts.netloc} (not a known application system)"
 
 
 def _value_for(key, profile):
@@ -210,8 +242,18 @@ async def autofill(url, profile):
     page = await ctx.new_page()
     await page.goto(url, wait_until="domcontentloaded")
     await page.wait_for_timeout(PAGE_SETTLE_MS)  # client-rendered forms appear after the initial load
-    report = {"filled": [], "skipped": [], "url": url}
+    # Redirects can land on a different site, so report where data actually goes.
+    final_url = page.url
+    host = urlsplit(final_url).hostname or ""
+    report = {"filled": [], "skipped": [], "url": final_url, "host": host,
+              "host_is_ats": is_ats_host(host)}
     for frame in page.frames:
+        if frame != page.main_frame:
+            allowed, reason = frame_policy(final_url, frame.url)
+            if not allowed:
+                if reason:
+                    report["skipped"].append(reason)
+                continue
         await _fill_frame(frame, profile, resume_path, report)
     await page.bring_to_front()
     report["filled"] = list(dict.fromkeys(report["filled"]))

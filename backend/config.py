@@ -23,6 +23,26 @@ if not DATA_DIR.is_absolute():
 # Origins allowed to call the API: the dev UI plus the backend serving its own build.
 TRUSTED_ORIGINS = set(CORS_ORIGINS) | {f"http://{h}:{PORT}" for h in ALLOWED_HOST_HEADERS}
 MAX_UPLOAD_BYTES = int(float(os.getenv("JOBPILOT_MAX_UPLOAD_MB", "10")) * 1024 * 1024)
+# Applicant tracking systems whose embedded application forms may be filled when
+# they appear in a cross-origin iframe. A host matches a domain or any subdomain.
+ATS_DOMAINS = (
+    "greenhouse.io",
+    "lever.co",
+    "ashbyhq.com",
+    "myworkdayjobs.com",
+    "workable.com",
+    "smartrecruiters.com",
+    "icims.com",
+    "jobvite.com",
+    "bamboohr.com",
+    "recruitee.com",
+    "breezy.hr",
+    "jazzhr.com",
+    "applytojob.com",
+    "teamtailor.com",
+    "personio.de",
+    "rippling-ats.com",
+)
 HEADLESS = os.getenv("JOBPILOT_HEADLESS", "0") == "1"
 PAGE_SETTLE_MS = int(os.getenv("JOBPILOT_PAGE_SETTLE_MS", "2500"))
 
