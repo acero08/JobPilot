@@ -1,0 +1,32 @@
+* { box-sizing: border-box; }
+body { margin: 0; font: 14px/1.4 system-ui, sans-serif; color: #1c1f24; background: #f5f6f8; }
+.app { display: grid; grid-template-columns: 240px 1fr 380px; height: 100vh; }
+aside { background: #fff; border-right: 1px solid #e3e5e8; padding: 16px; overflow: auto; display: flex; flex-direction: column; gap: 8px; }
+aside h1 { margin: 0 0 8px; font-size: 20px; }
+.item { padding: 10px; border-radius: 8px; cursor: pointer; border: 1px solid transparent; display: flex; flex-direction: column; }
+.item small { color: #6b7280; }
+.item:hover { background: #f1f3f5; }
+.item.active { background: #eef2ff; border-color: #c7d2fe; }
+main, section { overflow: auto; padding: 20px; }
+section { background: #fff; border-left: 1px solid #e3e5e8; }
+h2, h3 { margin: 16px 0 8px; }
+h3 { font-size: 13px; text-transform: uppercase; letter-spacing: .04em; color: #6b7280; }
+.grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.field { display: flex; flex-direction: column; gap: 4px; }
+.field.wide { grid-column: 1 / -1; margin: 6px 0; }
+.field span { font-size: 12px; color: #6b7280; text-transform: capitalize; }
+input:not([type=checkbox]):not([type=file]), select, textarea { padding: 8px; border: 1px solid #d1d5db; border-radius: 6px; font: inherit; background: #fff; width: 100%; }
+button { padding: 8px 12px; border-radius: 6px; border: 1px solid #d1d5db; background: #fff; cursor: pointer; font: inherit; }
+button.primary { background: #4f46e5; color: #fff; border-color: #4f46e5; }
+button.danger { color: #b91c1c; border-color: #fecaca; align-self: end; }
+button:disabled { opacity: .5; cursor: not-allowed; }
+.row { display: flex; gap: 12px; align-items: center; margin: 8px 0; }
+.ok { color: #15803d; }
+.err { color: #b91c1c; }
+.hint { color: #6b7280; font-size: 12px; }
+.ranked { list-style: none; padding: 0; margin: 8px 0; }
+.ranked li { padding: 6px 8px; border-radius: 6px; cursor: pointer; }
+.ranked li.sel { background: #eef2ff; }
+.ranked small { color: #6b7280; display: block; }
+.report { margin-top: 12px; background: #f9fafb; padding: 10px; border-radius: 8px; max-height: 320px; overflow: auto; }
+.report ul { margin: 4px 0 10px; padding-left: 4px; list-style: none; }
