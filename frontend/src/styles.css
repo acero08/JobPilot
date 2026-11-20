@@ -30,3 +30,8 @@ button:disabled { opacity: .5; cursor: not-allowed; }
 .ranked small { color: #6b7280; display: block; }
 .report { margin-top: 12px; background: #f9fafb; padding: 10px; border-radius: 8px; max-height: 320px; overflow: auto; }
 .report ul { margin: 4px 0 10px; padding-left: 4px; list-style: none; }
+.warn { background: #fffbeb; border: 1px solid #fcd34d; color: #92400e; padding: 8px 10px; border-radius: 6px; font-size: 13px; }
+.target { display: flex; flex-direction: column; gap: 2px; padding: 8px 10px; margin-bottom: 10px; border-radius: 6px; background: #eef2ff; border: 1px solid #c7d2fe; }
+.target b { font-size: 16px; word-break: break-all; }
+.target small { color: #6b7280; }
+.target.unknown { background: #fffbeb; border-color: #fcd34d; }

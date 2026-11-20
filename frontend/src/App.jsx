@@ -8,6 +8,9 @@ const blank = () => ({
   cover_letter: "",
 });
 
+const hostOf = (u) => { try { return new URL(u).hostname.toLowerCase(); } catch { return ""; } };
+const onAllowlist = (host, domains) => domains.some((d) => host === d || host.endsWith("." + d));
+
 const csv = (a) => (a || []).join(", ");
 const unCsv = (s) => s.split(",").map((x) => x.trim()).filter(Boolean);
 
@@ -104,7 +107,11 @@ function AutofillPanel({ profiles, selectedId }) {
   const [busy, setBusy] = useState(false);
   const [report, setReport] = useState(null);
   const [err, setErr] = useState("");
+  const [atsDomains, setAtsDomains] = useState([]);
   useEffect(() => { if (selectedId) setPid(selectedId); }, [selectedId]);
+  useEffect(() => { api.atsDomains().then(setAtsDomains).catch(() => {}); }, []);
+  const host = hostOf(url);
+  const unknownHost = host && atsDomains.length > 0 && !onAllowlist(host, atsDomains);
 
   const suggest = async () => {
     const r = await api.suggest(title, loc, remote); setRanked(r);
@@ -143,11 +150,22 @@ function AutofillPanel({ profiles, selectedId }) {
         </select>
       </label>
       <Field label="Application page URL" wide value={url} onChange={setUrl} />
+      {unknownHost && (
+        <p className="warn">
+          <b>{host}</b> is not a known application system. Profile data will be entered on this site;
+          confirm it is the employer's real application page before continuing.
+        </p>
+      )}
       <button className="primary" disabled={!pid || !url || busy} onClick={run}>{busy ? "Filling…" : "Open & autofill"}</button>
       <p className="hint">A browser window opens, fills what it can and stops. You review and click Submit yourself.</p>
       {err && <p className="err">{err}</p>}
       {report && (
         <div className="report">
+          <div className={"target" + (report.host_is_ats ? "" : " unknown")}>
+            <small>Filled on</small>
+            <b>{report.host}</b>
+            {!report.host_is_ats && <small>Not a known application system</small>}
+          </div>
           <b>Filled ({report.filled.length})</b>
           <ul>{report.filled.map((x, i) => <li key={i}>✓ {x}</li>)}</ul>
           <b>Needs you ({report.skipped.length})</b>

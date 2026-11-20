@@ -16,5 +16,6 @@ export const api = {
   remove: (id) => req(`/profiles/${id}`, { method: "DELETE" }),
   upload: (id, file) => { const f = new FormData(); f.append("file", file); return req(`/profiles/${id}/resume`, { method: "POST", body: f }); },
   autofill: (id, url) => req(`/profiles/${id}/autofill`, json("POST", { url })),
+  atsDomains: () => req("/ats-domains"),
   suggest: (title, location, remote) => req(`/suggest?title=${encodeURIComponent(title)}&location=${encodeURIComponent(location)}&remote=${remote}`),
 };
