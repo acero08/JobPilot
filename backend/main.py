@@ -9,12 +9,14 @@ from pydantic import BaseModel
 
 import config
 import db
+import security
 import suggest
 from autofill import autofill
 from db import RESUME_DIR
 
 db.init()
 app = FastAPI(title="JobPilot")
+app.middleware("http")(security.guard)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=config.CORS_ORIGINS,
@@ -98,4 +100,5 @@ if dist.exists():
 if __name__ == "__main__":
     import uvicorn
 
+    config.check_bind_host(config.HOST)
     uvicorn.run(app, host=config.HOST, port=config.PORT)
