@@ -1,5 +1,10 @@
+// Production: the backend embeds the token in index.html. Development: the
+// meta tag is absent and the Vite proxy adds the header (see vite.config.js).
+const token = document.querySelector('meta[name="jobpilot-token"]')?.content;
+
 async function req(path, opts = {}) {
-  const r = await fetch("/api" + path, opts);
+  const headers = { ...(opts.headers || {}), ...(token ? { "X-JobPilot-Token": token } : {}) };
+  const r = await fetch("/api" + path, { ...opts, headers });
   if (!r.ok) throw new Error((await r.json().catch(() => ({}))).detail || r.statusText);
   return r.json();
 }

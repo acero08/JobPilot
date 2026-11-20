@@ -4,6 +4,7 @@ from pathlib import Path
 
 from fastapi import FastAPI, File, HTTPException, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
@@ -92,9 +93,18 @@ def suggest_profile(title: str = "", location: str = "", remote: bool = False):
 
 
 # Serve the production UI build when it exists.
+# The token is embedded in index.html as a meta tag. Only same-origin pages can
+# read this response, and the Host check blocks rebinding, so other sites never see it.
 dist = Path(__file__).parent.parent / "frontend" / "dist"
 if dist.exists():
-    app.mount("/", StaticFiles(directory=dist, html=True), name="ui")
+    @app.get("/", include_in_schema=False)
+    def index():
+        html = (dist / "index.html").read_text()
+        meta = f'<meta name="jobpilot-token" content="{security.API_TOKEN}">'
+        return HTMLResponse(html.replace("</head>", meta + "</head>", 1),
+                            headers={"Cache-Control": "no-store"})
+
+    app.mount("/", StaticFiles(directory=dist), name="ui")
 
 
 if __name__ == "__main__":
