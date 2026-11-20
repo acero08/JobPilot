@@ -12,7 +12,8 @@ import re
 from playwright.async_api import async_playwright
 
 from config import HEADLESS, PAGE_SETTLE_MS
-from db import DATA_DIR, RESUME_DIR
+from db import DATA_DIR
+from uploads import stored_path
 
 # A persistent profile keeps job-site sessions, so sign-in is needed only once.
 BROWSER_DIR = DATA_DIR / "browser-profile"
@@ -202,11 +203,9 @@ async def _fill_frame(frame, profile, resume_path, report):
 
 
 async def autofill(url, profile):
-    resume_path = None
-    if profile.get("resume_file"):
-        cand = RESUME_DIR / profile["resume_file"]
-        if cand.exists():
-            resume_path = cand
+    resume_path = stored_path(profile.get("resume_file"))
+    if resume_path and not resume_path.exists():
+        resume_path = None
     ctx = await _get_context()
     page = await ctx.new_page()
     await page.goto(url, wait_until="domcontentloaded")

@@ -1,5 +1,4 @@
 import re
-import uuid
 from pathlib import Path
 
 from fastapi import FastAPI, File, HTTPException, UploadFile
@@ -12,8 +11,8 @@ import config
 import db
 import security
 import suggest
+import uploads
 from autofill import autofill
-from db import RESUME_DIR
 
 db.init()
 app = FastAPI(title="JobPilot")
@@ -35,22 +34,37 @@ def list_profiles():
     return db.list_profiles()
 
 
+# Fields only the server may set. Client values are dropped so a crafted
+# profile cannot point resume_file at an arbitrary file on disk.
+SERVER_FIELDS = ("resume_file", "resume_name")
+
+
+def _client_fields(body):
+    return {k: v for k, v in body.items() if k not in SERVER_FIELDS and k != "id"}
+
+
 @app.post("/api/profiles")
 def create_profile(body: dict):
-    pid = db.create_profile(body)
+    pid = db.create_profile(_client_fields(body))
     return db.get_profile(pid)
 
 
 @app.put("/api/profiles/{pid}")
 def update_profile(pid: int, body: dict):
-    if not db.get_profile(pid):
+    existing = db.get_profile(pid)
+    if not existing:
         raise HTTPException(404, "Profile not found")
-    db.update_profile(pid, body)
+    data = _client_fields(body)
+    data.update({k: existing[k] for k in SERVER_FIELDS if k in existing})
+    db.update_profile(pid, data)
     return db.get_profile(pid)
 
 
 @app.delete("/api/profiles/{pid}")
 def delete_profile(pid: int):
+    p = db.get_profile(pid)
+    if p and (old := uploads.stored_path(p.get("resume_file"))):
+        old.unlink(missing_ok=True)
     db.delete_profile(pid)
     return {"ok": True}
 
@@ -60,16 +74,15 @@ async def upload_resume(pid: int, file: UploadFile = File(...)):
     p = db.get_profile(pid)
     if not p:
         raise HTTPException(404, "Profile not found")
-    ext = Path(file.filename or "").suffix.lower()
-    if ext not in (".pdf", ".doc", ".docx"):
-        raise HTTPException(400, "Resume must be PDF, DOC or DOCX")
-    stored = f"{uuid.uuid4().hex}{ext}"
-    (RESUME_DIR / stored).write_bytes(await file.read())
-    old = p.get("resume_file")
-    if old:
-        (RESUME_DIR / old).unlink(missing_ok=True)
-    p["resume_file"] = stored
-    p["resume_name"] = re.sub(r"[^\w.\- ]", "_", file.filename or stored)
+    try:
+        data = await uploads.read_limited(file)
+        ext = uploads.validate(file.filename, data)
+    except uploads.UploadError as e:
+        raise HTTPException(e.status, e.detail)
+    if old := uploads.stored_path(p.get("resume_file")):
+        old.unlink(missing_ok=True)
+    p["resume_file"] = uploads.store(ext, data)
+    p["resume_name"] = uploads.display_name(file.filename)
     db.update_profile(pid, p)
     return db.get_profile(pid)
 
