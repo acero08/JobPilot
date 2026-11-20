@@ -20,6 +20,8 @@ CORS_ORIGINS = [o.strip() for o in os.getenv(
 DATA_DIR = Path(os.getenv("JOBPILOT_DATA_DIR", "data")).expanduser()
 if not DATA_DIR.is_absolute():
     DATA_DIR = BASE_DIR / DATA_DIR  # relative paths are relative to backend/
+# Origins allowed to call the API: the dev UI plus the backend serving its own build.
+TRUSTED_ORIGINS = set(CORS_ORIGINS) | {f"http://{h}:{PORT}" for h in ALLOWED_HOST_HEADERS}
 HEADLESS = os.getenv("JOBPILOT_HEADLESS", "0") == "1"
 PAGE_SETTLE_MS = int(os.getenv("JOBPILOT_PAGE_SETTLE_MS", "2500"))
 
